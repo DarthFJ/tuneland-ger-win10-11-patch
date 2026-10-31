@@ -4,7 +4,8 @@ param(
     [switch]$OhneMusik,    # nur für Tests: Musikumwandlung überspringen
     [switch]$OhneVerknuepfungen,
     [switch]$Automatisch,   # ohne Fenster (für Tests)
-    [string]$Vorschau       # nur für Tests: Fenster als PNG speichern und beenden
+    [string]$Vorschau,      # nur für Tests: Fenster als PNG speichern und beenden
+    [switch]$Reparieren     # nur Symbole, Verknüpfungen und Apps-Eintrag neu anlegen
 )
 
 $ErrorActionPreference = 'Stop'
@@ -197,38 +198,51 @@ function Install-TuneLand {
     }
     if ($audio.Source -is [IDisposable]) { $audio.Source.Dispose() }
 
-    # Symbole, Verknüpfungen, Eintrag in „Apps“
     Set-Status 'Lege Verknüpfungen an …' 94
-    $icon = Join-Path $Ziel 'tuneland.ico'
-    Save-Icon (Join-Path $src 'TUNEGERM.EXE') $icon
-    Save-Icon (Join-Path $src 'JUKEGERM.EXE') (Join-Path $Ziel 'liederspieler.ico')
-
-    if (-not $OhneVerknuepfungen) {
-        $run = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'TuneLand.ps1') + '"'
-        New-Shortcut (Join-Path ([Environment]::GetFolderPath('Desktop')) 'TuneLand.lnk') $run $icon 'TuneLand starten'
-        $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'TuneLand'
-        New-Item -ItemType Directory -Force $menu | Out-Null
-        New-Shortcut (Join-Path $menu 'TuneLand.lnk') $run $icon 'TuneLand starten'
-        New-Shortcut (Join-Path $menu 'TuneLand Liederspieler.lnk') ($run + ' -Liederspieler') (Join-Path $Ziel 'liederspieler.ico') 'Die Lieder aus TuneLand abspielen'
-        New-Shortcut (Join-Path $menu 'TuneLand deinstallieren.lnk') ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'uninstall.ps1') + '"') $null 'TuneLand entfernen'
-
-        $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TuneLand'
-        New-Item $key -Force | Out-Null
-        $size = [int]((Get-ChildItem $Ziel -Recurse -File | Measure-Object Length -Sum).Sum / 1KB)
-        $props = @{
-            DisplayName     = 'TuneLand (7th Level, Patch für Windows 10/11)'
-            DisplayIcon     = $icon
-            Publisher       = '7th Level / TuneLand-Patch'
-            InstallLocation = $Ziel
-            UninstallString = 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'uninstall.ps1') + '"'
-        }
-        foreach ($p in $props.GetEnumerator()) { Set-ItemProperty $key $p.Key $p.Value }
-        Set-ItemProperty $key EstimatedSize $size -Type DWord
-        Set-ItemProperty $key NoModify 1 -Type DWord
-        Set-ItemProperty $key NoRepair 1 -Type DWord
-    }
+    Register-TuneLand $src
 
     Set-Status 'Fertig! TuneLand startet über das Symbol auf dem Desktop. Die CD bzw. das Abbild muss dabei eingelegt sein.' 100
+}
+
+# Symbole, Verknüpfungen und Eintrag in „Apps“ (auch einzeln aufrufbar, um eine Installation zu reparieren)
+function Register-TuneLand([string]$src) {
+    # Eigene Dateinamen pro Symbol: Windows merkt sich Symbole nach Pfad, ein gleichnamiges altes Bild bliebe sonst stehen
+    Remove-Item (Join-Path $Ziel 'tuneland.ico'), (Join-Path $Ziel 'liederspieler.ico') -ErrorAction SilentlyContinue
+    $icon = Join-Path $Ziel 'TuneLand-Spiel.ico'
+    $iconSongs = Join-Path $Ziel 'TuneLand-Lieder.ico'
+    Save-Icon (Join-Path $src 'TUNEGERM.EXE') $icon
+    Save-Icon (Join-Path $src 'JUKEGERM.EXE') $iconSongs
+
+    if ($OhneVerknuepfungen) { return }
+
+    $run = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'TuneLand.ps1') + '"'
+    New-Shortcut (Join-Path ([Environment]::GetFolderPath('Desktop')) 'TuneLand.lnk') $run $icon 'TuneLand starten'
+    $menu = Join-Path ([Environment]::GetFolderPath('Programs')) 'TuneLand'
+    New-Item -ItemType Directory -Force $menu | Out-Null
+    New-Shortcut (Join-Path $menu 'TuneLand.lnk') $run $icon 'TuneLand starten'
+    New-Shortcut (Join-Path $menu 'TuneLand Liederspieler.lnk') ($run + ' -Liederspieler') $iconSongs 'Die Lieder aus TuneLand abspielen'
+    New-Shortcut (Join-Path $menu 'TuneLand deinstallieren.lnk') ('-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'uninstall.ps1') + '"') $null 'TuneLand entfernen'
+
+    $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TuneLand'
+    New-Item $key -Force | Out-Null
+    $size = [int]((Get-ChildItem $Ziel -Recurse -File | Measure-Object Length -Sum).Sum / 1KB)
+    $props = @{
+        DisplayName     = 'TuneLand (7th Level, Patch für Windows 10/11)'
+        DisplayIcon     = $icon
+        Publisher       = '7th Level / TuneLand-Patch'
+        InstallLocation = $Ziel
+        UninstallString = 'powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'uninstall.ps1') + '"'
+    }
+    foreach ($p in $props.GetEnumerator()) { Set-ItemProperty $key $p.Key $p.Value }
+    Set-ItemProperty $key EstimatedSize $size -Type DWord
+    Set-ItemProperty $key NoModify 1 -Type DWord
+    Set-ItemProperty $key NoRepair 1 -Type DWord
+    if (-not (Get-ItemProperty $key -ErrorAction SilentlyContinue).DisplayName) {
+        throw 'Der Eintrag unter „Apps“ konnte nicht angelegt werden.'
+    }
+
+    # Explorer auffordern, Symbole neu zu laden
+    [TuneLand.Shell]::Refresh()
 }
 
 if ($Vorschau) {
@@ -238,6 +252,14 @@ if ($Vorschau) {
     $form.DrawToBitmap($bmp, (New-Object System.Drawing.Rectangle(0, 0, $form.Width, $form.Height)))
     $bmp.Save($Vorschau)
     $form.Close()
+    return
+}
+
+if ($Reparieren) {
+    $drive = Find-GameDrive
+    if (-not $drive) { throw 'Keine TuneLand-CD gefunden.' }
+    Register-TuneLand (Join-Path $drive.RootDirectory.FullName 'TUNELAND')
+    Write-Host 'Symbole, Verknüpfungen und Apps-Eintrag neu angelegt.'
     return
 }
 

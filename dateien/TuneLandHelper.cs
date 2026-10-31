@@ -271,6 +271,14 @@ namespace TuneLand
         }
     }
 
+    public static class Shell
+    {
+        [DllImport("shell32.dll")] static extern void SHChangeNotify(int eventId, uint flags, IntPtr item1, IntPtr item2);
+
+        // SHCNE_ASSOCCHANGED: Explorer lädt Symbole neu
+        public static void Refresh() { SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero); }
+    }
+
     // ---------- Symbole aus 16-Bit-Programmen (NE-Format) ----------
     // Windows liest Symbole aus Windows-3.x-Programmen nicht mehr aus, deshalb hier von Hand aus der Ressourcentabelle
     public static class NeIcon

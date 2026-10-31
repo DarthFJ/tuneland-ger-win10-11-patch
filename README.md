@@ -79,6 +79,9 @@ umgewandelt, denn die CD-Audiotracks lassen sich unter otvdm und von gemounteten
 - **Frage nach der CUE-Datei**: Die `.cue` zum gemounteten Abbild auswählen. Sie muss neben der `.bin` liegen.
 - **Kein Vollbild**: Alt + Shift + A drücken. Nach einem Wechsel von Bildschirm oder Auflösung erkennt der Patch die
   Bildfläche neu. Andernfalls hilft es, `bildausschnitt.txt` im Installationsordner zu löschen.
+- **Verknüpfungen, Symbole oder Eintrag unter *Apps* fehlen**: Bei gemounteter CD im Patch-Ordner
+  `powershell -ExecutionPolicy Bypass -File dateien\install.ps1 -Reparieren` ausführen. Das legt nur diese drei Dinge
+  neu an, ohne die Installation sonst anzufassen.
 - **Keine Musik**: Unter `%LOCALAPPDATA%\Programs\TuneLand\otvdm\` sollte ein Ordner `Music` mit `Track02.ogg` bis
   `Track98.ogg` liegen. `winmm.log` daneben zeigt, welche CD-Befehle das Spiel geschickt hat.
 
