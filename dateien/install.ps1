@@ -3,7 +3,8 @@ param(
     [string]$Ziel = (Join-Path $env:LOCALAPPDATA 'Programs\TuneLand'),
     [switch]$OhneMusik,    # nur für Tests: Musikumwandlung überspringen
     [switch]$OhneVerknuepfungen,
-    [switch]$Automatisch    # ohne Fenster (für Tests)
+    [switch]$Automatisch,   # ohne Fenster (für Tests)
+    [string]$Vorschau       # nur für Tests: Fenster als PNG speichern und beenden
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,12 +17,18 @@ Add-Type -Name Dpi -Namespace Native -MemberDefinition '[DllImport("user32.dll")
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
 # ---------- Oberfläche ----------
+# Schriften in Punkt wachsen mit der Bildschirmskalierung von selbst mit, Pixelmaße rechnen wir selbst um
+$g = [System.Drawing.Graphics]::FromHwnd([IntPtr]::Zero)
+$scale = $g.DpiX / 96.0
+$g.Dispose()
+function Px([int]$v) { [int][math]::Round($v * $scale) }
+function Place($control, [int]$x, [int]$y, [int]$w, [int]$h) { $control.SetBounds((Px $x), (Px $y), (Px $w), (Px $h)) }
+
 $form = New-Object System.Windows.Forms.Form
-$form.Text = 'TuneLand-Patch'
-$form.AutoScaleDimensions = New-Object System.Drawing.SizeF(96, 96)
-$form.AutoScaleMode = 'Dpi'
+$form.Text = 'TuneLand GER Win10/11 Patch'
+$form.AutoScaleMode = 'None'
 $form.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$form.ClientSize = New-Object System.Drawing.Size(560, 290)
+$form.ClientSize = New-Object System.Drawing.Size((Px 580), (Px 320))
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
 $form.StartPosition = 'CenterScreen'
@@ -29,28 +36,28 @@ $form.StartPosition = 'CenterScreen'
 $title = New-Object System.Windows.Forms.Label
 $title.Text = 'TuneLand für Windows 10/11 einrichten'
 $title.Font = New-Object System.Drawing.Font('Segoe UI', 14, [System.Drawing.FontStyle]::Bold)
-$title.SetBounds(20, 15, 520, 32)
+Place $title 20 16 540 34
 
 $intro = New-Object System.Windows.Forms.Label
 $intro.Text = "Legen Sie die TuneLand-CD ein oder mounten Sie das BIN/CUE-Abbild. " +
               "Der Patch richtet otvdm, die Musik und den Start im Vollbild ein. " +
               "Das Spiel läuft weiterhin von der CD – sie muss zum Spielen eingelegt sein."
-$intro.SetBounds(20, 55, 520, 70)
+Place $intro 20 60 540 84
 
 $status = New-Object System.Windows.Forms.Label
 $status.Text = 'Bereit.'
-$status.SetBounds(20, 135, 520, 45)
+Place $status 20 156 540 48
 
 $bar = New-Object System.Windows.Forms.ProgressBar
-$bar.SetBounds(20, 185, 520, 24)
+Place $bar 20 212 540 22
 
 $btnStart = New-Object System.Windows.Forms.Button
 $btnStart.Text = 'Installieren'
-$btnStart.SetBounds(300, 235, 120, 34)
+Place $btnStart 300 262 130 38
 
 $btnClose = New-Object System.Windows.Forms.Button
 $btnClose.Text = 'Schließen'
-$btnClose.SetBounds(430, 235, 110, 34)
+Place $btnClose 440 262 120 38
 $btnClose.Add_Click({ $form.Close() })
 
 $form.Controls.AddRange(@($title, $intro, $status, $bar, $btnStart, $btnClose))
@@ -133,6 +140,7 @@ function New-Shortcut([string]$path, [string]$arguments, [string]$icon, [string]
 }
 
 function Save-Icon([string]$exe, [string]$ico) {
+    try { if ([TuneLand.NeIcon]::Save($exe, $ico)) { return } } catch {}
     try {
         $i = [System.Drawing.Icon]::ExtractAssociatedIcon($exe)
         $fs = [IO.File]::Create($ico); $i.Save($fs); $fs.Close()
@@ -221,6 +229,16 @@ function Install-TuneLand {
     }
 
     Set-Status 'Fertig! TuneLand startet über das Symbol auf dem Desktop. Die CD bzw. das Abbild muss dabei eingelegt sein.' 100
+}
+
+if ($Vorschau) {
+    $form.Show()
+    [System.Windows.Forms.Application]::DoEvents()
+    $bmp = New-Object System.Drawing.Bitmap($form.Width, $form.Height)
+    $form.DrawToBitmap($bmp, (New-Object System.Drawing.Rectangle(0, 0, $form.Width, $form.Height)))
+    $bmp.Save($Vorschau)
+    $form.Close()
+    return
 }
 
 if ($Automatisch) {

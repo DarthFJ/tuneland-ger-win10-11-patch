@@ -271,6 +271,85 @@ namespace TuneLand
         }
     }
 
+    // ---------- Symbole aus 16-Bit-Programmen (NE-Format) ----------
+    // Windows liest Symbole aus Windows-3.x-Programmen nicht mehr aus, deshalb hier von Hand aus der Ressourcentabelle
+    public static class NeIcon
+    {
+        const int RT_ICON = 0x8003, RT_GROUP_ICON = 0x800E;
+
+        class Res { public int Type; public int Id; public long Offset; public int Length; }
+
+        public static bool Save(string exePath, string icoPath)
+        {
+            byte[] f = File.ReadAllBytes(exePath);
+            if (f.Length < 0x40 || f[0] != 'M' || f[1] != 'Z') return false;
+            int ne = BitConverter.ToInt32(f, 0x3C);
+            if (ne + 0x40 > f.Length || f[ne] != 'N' || f[ne + 1] != 'E') return false;
+
+            int p = ne + BitConverter.ToUInt16(f, ne + 0x24);
+            int shift = BitConverter.ToUInt16(f, p);
+            p += 2;
+            var list = new List<Res>();
+            while (true)
+            {
+                int type = BitConverter.ToUInt16(f, p);
+                if (type == 0) break;
+                int count = BitConverter.ToUInt16(f, p + 2);
+                p += 8;
+                for (int i = 0; i < count; i++, p += 12)
+                {
+                    list.Add(new Res
+                    {
+                        Type = type,
+                        Id = BitConverter.ToUInt16(f, p + 6),
+                        Offset = (long)BitConverter.ToUInt16(f, p) << shift,
+                        Length = BitConverter.ToUInt16(f, p + 2) << shift
+                    });
+                }
+            }
+
+            var group = list.Find(r => r.Type == RT_GROUP_ICON);
+            if (group == null) return false;
+            int g = (int)group.Offset;
+            int n = BitConverter.ToUInt16(f, g + 4);
+
+            // ICO: Kopf (6) + Einträge (16) + Bilddaten
+            var images = new List<byte[]>();
+            var entries = new List<byte[]>();
+            for (int i = 0; i < n; i++)
+            {
+                int e = g + 6 + i * 14;
+                int id = BitConverter.ToUInt16(f, e + 12) | 0x8000;
+                var icon = list.Find(r => r.Type == RT_ICON && r.Id == id);
+                if (icon == null) continue;
+                int size = BitConverter.ToInt32(f, e + 8);
+                var data = new byte[Math.Min(size, icon.Length)];
+                Array.Copy(f, icon.Offset, data, 0, data.Length);
+                images.Add(data);
+                var entry = new byte[16];
+                Array.Copy(f, e, entry, 0, 8);
+                BitConverter.GetBytes(data.Length).CopyTo(entry, 8);
+                entries.Add(entry);
+            }
+            if (images.Count == 0) return false;
+
+            using (var o = new FileStream(icoPath, FileMode.Create))
+            using (var w = new BinaryWriter(o))
+            {
+                w.Write((ushort)0); w.Write((ushort)1); w.Write((ushort)images.Count);
+                int offset = 6 + 16 * images.Count;
+                for (int i = 0; i < images.Count; i++)
+                {
+                    BitConverter.GetBytes(offset).CopyTo(entries[i], 12);
+                    w.Write(entries[i]);
+                    offset += images[i].Length;
+                }
+                foreach (var img in images) w.Write(img);
+            }
+            return true;
+        }
+    }
+
     // ---------- Spielfenster und Bildausschnitt ----------
     public static class GameWindow
     {
