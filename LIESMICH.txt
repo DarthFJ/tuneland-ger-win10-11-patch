@@ -1,8 +1,11 @@
-TuneLand-Patch für Windows 10/11
-================================
+TuneLand GER Win10/11 Patch
+===========================
 
 Damit läuft "TuneLand mit Ron Williams" (7th Level, deutsche Version) unter
 Windows 10/11: ohne CD, mit Musik und im Vollbild.
+
+Getestet nur mit der deutschen Version (CD-Name GERMTUNE). Andere
+Sprachfassungen werden derzeit nicht erkannt.
 
 So geht's
 ---------

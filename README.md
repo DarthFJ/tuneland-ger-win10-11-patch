@@ -1,4 +1,4 @@
-# TuneLand-Patch für Windows 10/11
+# TuneLand GER Win10/11 Patch
 
 Damit läuft **„TuneLand mit Ron Williams“** (7th Level, 1994, deutsche Version) auf modernem Windows.
 Ein Doppelklick genügt. Danach läuft das Spiel **ohne CD**, **mit Musik** und **im Vollbild**.
@@ -10,6 +10,17 @@ Ein Doppelklick genügt. Danach läuft das Spiel **ohne CD**, **mit Musik** und 
 - Windows 10 oder 11 (64 Bit)
 - Die **deutsche TuneLand-CD** oder ein Abbild davon als **BIN/CUE** (Volume-Name `GERMTUNE`)
 - Für Abbilder ein Programm zum Mounten, z. B. [WinCDEmu](https://wincdemu.sysprogs.org/)
+
+## Unterstützte Versionen
+
+Getestet ist der Patch **nur mit der deutschen Version** („TuneLand mit Ron Williams“, CD-Name `GERMTUNE`,
+Programm `TUNELAND\TUNEGERM.EXE`).
+
+Andere Sprachfassungen, etwa das englische Original *Howie Mandel's TuneLand*, werden **derzeit nicht erkannt**.
+Der Installer sucht fest nach `TUNEGERM.EXE` und `JUKEGERM.EXE`, und andere Fassungen heißen sehr wahrscheinlich anders.
+Grundsätzlich dürfte der Ansatz dort genauso funktionieren, denn es ist dieselbe Engine mit CD-Musik.
+Wer eine andere Version besitzt und helfen möchte, kann gern ein [Issue](../../issues) mit der Dateiliste der CD
+(Ordner `TUNELAND`) und dem CD-Namen anlegen.
 
 ## Installation
 
@@ -105,3 +116,8 @@ tracks are read from the disc or the BIN and encoded to OGG. A patched [ogg-winm
 plays them; the patch adds handling for `mciSendCommandW`/`mciSendStringW`, which otvdm uses. A portable
 [Magpie](https://github.com/Blinue/Magpie) crops and upscales the centred 640×480 picture. No game content is
 included. Scripts are GPL-2.0-or-later; bundled tools keep their own licenses.
+
+**Supported versions:** only tested with the **German** release (disc label `GERMTUNE`, `TUNELAND\TUNEGERM.EXE`).
+Other language versions, such as the English *Howie Mandel's TuneLand*, are not detected yet, because the installer looks
+for the German file names. If you own another version, please open an [issue](../../issues) with the file list of
+the `TUNELAND` folder and the disc label.
