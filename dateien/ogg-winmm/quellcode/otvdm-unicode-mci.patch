@@ -1,0 +1,162 @@
+diff --git a/a/ogg-winmm.c b/b/ogg-winmm.c
+index 64b1cba..df7a6ea 100644
+--- a/a/ogg-winmm.c
++++ b/b/ogg-winmm.c
+@@ -23,7 +23,7 @@
+ #define MEDIA_IDENTITY "CDDA7777CDDA7777"
+ #define MAX_TRACKS 99
+ 
+-//#define _DEBUG
++#define _DEBUG
+ 
+ #ifdef _DEBUG
+ #define dprintf(...) if (fh) { fprintf(fh, __VA_ARGS__); fflush(NULL); }
+@@ -123,15 +123,21 @@ DWORD WINAPI player_main(void *unused)
+ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+ {
+ 	if (fdwReason == DLL_PROCESS_ATTACH) {
+-#ifdef _DEBUG
+-		fh = fopen("winmm.log", "w");
+-#endif
+ 		GetModuleFileName(hinstDLL, path, sizeof(path));
++		unsigned int firstPos = 0;
+ 
+ 		char *last = strrchr(path, '.');
+ 		if (last) {
++#ifdef _DEBUG
++			/* Log next to the DLL, the working directory may be a read-only CD */
++			strcpy(last, ".log");
++			fh = fopen(path, "w");
++#endif
+ 			strcpy(last, ".ini");
+ 
++			/* Absolute start of the first audio track in ms, so MSF positions match the real disc */
++			firstPos = GetPrivateProfileInt("OGG-WinMM", "FirstTrackPosition", 0, path);
++
+ 			GetPrivateProfileString("OGG-WinMM", "CDDAPath", "Music", cddaPath, MAX_PATH, path);
+ 			cddaVol = GetPrivateProfileInt("OGG-WinMM", "CDDAVolume", 100, path);
+ 			midiVol = GetPrivateProfileInt("OGG-WinMM", "MIDIVolume", 100, path);
+@@ -156,7 +162,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
+ 			dprintf("ogg-winmm music directory is %s\n", path);
+ 
+ 			memset(tracks, 0, sizeof(tracks));
+-			unsigned int position = 0;
++			unsigned int position = firstPos;
+ 
+ 			for (int i = 1; i <= MAX_TRACKS; i++) {
+ 				snprintf(tracks[i].path, MAX_PATH, "%s\\Track%02d.ogg", path, i);
+@@ -901,6 +907,82 @@ MCIERROR WINAPI fake_mciSendStringA(LPCSTR cmd, LPSTR ret, UINT cchReturn, HANDL
+ 	/* return 0; */
+ }
+ 
++/* Unicode variants: Wine's 16-bit MMSYSTEM (used by otvdm) calls these instead of the A versions */
++MCIERROR WINAPI fake_mciSendCommandW(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR fdwCommand, DWORD_PTR dwParam)
++{
++	dprintf("mciSendCommandW(IDDevice=%p, uMsg=%p, fdwCommand=%p, dwParam=%p)\n", IDDevice, uMsg, fdwCommand, dwParam);
++
++	if (uMsg == MCI_OPEN) {
++		LPMCI_OPEN_PARMSW parms = (LPVOID)dwParam;
++		int isCD = 0;
++
++		if (fdwCommand & MCI_OPEN_TYPE_ID) {
++			isCD = LOWORD(parms->lpstrDeviceType) == MCI_DEVTYPE_CD_AUDIO;
++		} else if (fdwCommand & MCI_OPEN_TYPE) {
++			isCD = parms->lpstrDeviceType && _wcsicmp(parms->lpstrDeviceType, L"cdaudio") == 0;
++		}
++
++		if (isCD) {
++			dprintf("  MCI_OPEN (W) -> magic device id for cdaudio\n");
++			if (fdwCommand & MCI_OPEN_ALIAS && parms->lpstrAlias) {
++				WideCharToMultiByte(CP_ACP, 0, parms->lpstrAlias, -1, alias_s, sizeof(alias_s), NULL, NULL);
++			}
++			if (fdwCommand & MCI_NOTIFY) {
++				SendNotifyMessageA((HWND)parms->dwCallback, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, MAGIC_DEVICEID);
++			}
++			parms->wDeviceID = MAGIC_DEVICEID;
++			return 0;
++		}
++		return relay_mciSendCommandW(IDDevice, uMsg, fdwCommand, dwParam);
++	}
++
++	if (IDDevice != MAGIC_DEVICEID) {
++		return relay_mciSendCommandW(IDDevice, uMsg, fdwCommand, dwParam);
++	}
++
++	/* Commands returning strings need a converted buffer, all others share the A layout */
++	if (uMsg == MCI_INFO || uMsg == MCI_SYSINFO) {
++		LPMCI_INFO_PARMSW parms = (LPVOID)dwParam;
++		char buf[256] = {0};
++		MCI_INFO_PARMSA a = { parms->dwCallback, buf, sizeof(buf) };
++
++		if (uMsg == MCI_SYSINFO && fdwCommand & MCI_SYSINFO_QUANTITY) {
++			*(DWORD*)parms->lpstrReturn = 1;
++			return 0;
++		}
++		fake_mciSendCommandA(IDDevice, uMsg, fdwCommand, (DWORD_PTR)&a);
++		if (parms->lpstrReturn && parms->dwRetSize) {
++			MultiByteToWideChar(CP_ACP, 0, buf, -1, parms->lpstrReturn, parms->dwRetSize);
++		}
++		return 0;
++	}
++
++	return fake_mciSendCommandA(IDDevice, uMsg, fdwCommand, dwParam);
++}
++
++MCIERROR WINAPI fake_mciSendStringW(LPCWSTR cmd, LPWSTR ret, UINT cchReturn, HWND hwndCallback)
++{
++	char cmdA[1000], retA[1000] = {0}, lower[1000];
++
++	if (!cmd || !WideCharToMultiByte(CP_ACP, 0, cmd, -1, cmdA, sizeof(cmdA), NULL, NULL)) {
++		return relay_mciSendStringW(cmd, ret, cchReturn, hwndCallback);
++	}
++	dprintf("[MCI String W = %s]\n", cmdA);
++
++	/* Only take over strings aimed at the CD device, everything else goes to the real winmm */
++	strcpy(lower, cmdA);
++	for (int i = 0; lower[i]; i++) lower[i] = tolower(lower[i]);
++	if (!strstr(lower, "cdaudio") && !strstr(lower, alias_s)) {
++		return relay_mciSendStringW(cmd, ret, cchReturn, hwndCallback);
++	}
++
++	MCIERROR err = fake_mciSendStringA(cmdA, retA, sizeof(retA), hwndCallback);
++	if (ret && cchReturn) {
++		MultiByteToWideChar(CP_ACP, 0, retA, -1, ret, cchReturn);
++	}
++	return err;
++}
++
+ UINT WINAPI fake_auxGetNumDevs()
+ {
+ 	dprintf("fake_auxGetNumDevs() = 1\n");
+diff --git a/a/stub.h b/b/stub.h
+index a3c9ed9..2916901 100644
+--- a/a/stub.h
++++ b/b/stub.h
+@@ -3,3 +3,5 @@ void stub_wavevol(int vol);
+ void unloadRealDLL();
+ MCIERROR WINAPI relay_mciSendCommandA(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3);
+ MCIERROR WINAPI relay_mciSendStringA(LPCSTR a0, LPSTR a1, UINT a2, HWND a3);
++MCIERROR WINAPI relay_mciSendCommandW(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3);
++MCIERROR WINAPI relay_mciSendStringW(LPCWSTR a0, LPWSTR a1, UINT a2, HWND a3);
+diff --git a/a/stubs.c b/b/stubs.c
+index e17505c..8c9cc46 100644
+--- a/a/stubs.c
++++ b/b/stubs.c
+@@ -1297,7 +1297,7 @@ MMRESULT WINAPI fake_mmioCreateChunk(HMMIO a0, LPMMCKINFO a1, UINT a2)
+ 	return (*funcp)(a0, a1, a2);
+ }
+ 
+-MCIERROR WINAPI fake_mciSendCommandW(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3)
++MCIERROR WINAPI relay_mciSendCommandW(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3)
+ {
+ 	static MCIERROR(WINAPI *funcp)(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3) = NULL;
+ 	if (funcp == NULL)
+@@ -1305,7 +1305,7 @@ MCIERROR WINAPI fake_mciSendCommandW(MCIDEVICEID a0, UINT a1, DWORD a2, DWORD a3
+ 	return (*funcp)(a0, a1, a2, a3);
+ }
+ 
+-MCIERROR WINAPI fake_mciSendStringW(LPCWSTR a0, LPWSTR a1, UINT a2, HWND a3)
++MCIERROR WINAPI relay_mciSendStringW(LPCWSTR a0, LPWSTR a1, UINT a2, HWND a3)
+ {
+ 	static MCIERROR(WINAPI *funcp)(LPCWSTR a0, LPWSTR a1, UINT a2, HWND a3) = NULL;
+ 	if (funcp == NULL)

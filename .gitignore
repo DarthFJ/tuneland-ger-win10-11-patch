@@ -1,0 +1,7 @@
+# Fremdprogramme und gebaute Dateien kommen über tools\build-release.ps1 bzw. das Release-ZIP
+dateien/otvdm/
+dateien/Magpie/
+dateien/oggenc2.exe
+dateien/ogg-winmm/winmm.dll
+release/
+build/

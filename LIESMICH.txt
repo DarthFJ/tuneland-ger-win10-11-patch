@@ -1,0 +1,45 @@
+TuneLand-Patch für Windows 10/11
+================================
+
+Damit läuft "TuneLand mit Ron Williams" (7th Level, deutsche Version) unter
+Windows 10/11: ohne CD, mit Musik und im Vollbild.
+
+So geht's
+---------
+1. TuneLand-CD einlegen ODER das BIN/CUE-Abbild mounten
+   (z. B. mit WinCDEmu: Rechtsklick auf die .cue > "Einhängen").
+2. Doppelklick auf "TuneLand installieren.cmd" und dann auf "Installieren".
+3. Fertig. TuneLand startet ab jetzt über das Symbol auf dem Desktop.
+   Die CD bzw. das Abbild wird danach nicht mehr gebraucht.
+
+Gemountete Abbilder liefern keine Musiktracks. Dann sucht der Patch die
+passende .cue-Datei selbst (neben dem Patch-Ordner, auf dem Desktop, in
+Dokumente und Downloads) oder fragt danach.
+
+Im Spiel
+--------
+F1 = Hilfe, Esc = zurück auf den Hof, Shift+Esc = TuneLand sofort beenden.
+Beim ersten Start erkennt der Patch nach ein paar Sekunden die Bildfläche
+und schaltet dann ins Vollbild. Danach geht das sofort.
+Falls kein Vollbild kommt: Alt+Shift+A drücken.
+
+Installiert wird nach
+---------------------
+%LOCALAPPDATA%\Programs\TuneLand   (keine Administratorrechte nötig)
+Entfernen: Startmenü > TuneLand > "TuneLand deinstallieren"
+           oder Einstellungen > Apps.
+
+Enthaltene Werkzeuge
+--------------------
+- otvdm / winevdm 0.9.0 (führt 16-Bit-Windows-Programme aus)
+  https://github.com/otya128/winevdm
+- ogg-winmm (spielt die CD-Musik als OGG-Dateien), angepasst für otvdm:
+  fängt zusätzlich die Unicode-MCI-Befehle ab. Quellcode in dateien\ogg-winmm\quellcode
+  https://github.com/ayuanx/ogg-winmm
+- oggenc2 2.88 (wandelt die CD-Musik bei der Installation in OGG um)
+  https://www.rarewares.org/ogg-oggenc.php
+- Magpie 0.13.0 (skaliert das Spielbild auf Vollbild)
+  https://github.com/Blinue/Magpie
+
+Die Spieldaten und die Musik stammen immer von Ihrer eigenen CD;
+der Patch enthält keine Inhalte des Spiels.
