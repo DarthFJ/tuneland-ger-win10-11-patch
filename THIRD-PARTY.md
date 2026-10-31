@@ -24,6 +24,7 @@ optionale Einstellung `FirstTrackPosition`.
 
 ## Spielinhalte
 
-Der Patch enthält **keine** Dateien, Bilder oder Musik von TuneLand. Alles davon kopiert bzw.
-liest der Installer zur Laufzeit von der CD oder dem Abbild des Benutzers.
+Der Patch enthält **keine** Dateien, Bilder oder Musik von TuneLand. Das Spiel läuft immer von der
+CD bzw. dem gemounteten Abbild des Benutzers. Nur die Lieder wandelt der Installer von dieser CD in
+OGG-Dateien um, weil sich die CD-Audiotracks anders nicht abspielen lassen.
 TuneLand ist ein Produkt von 7th Level, Inc.; dieses Projekt steht in keiner Verbindung dazu.

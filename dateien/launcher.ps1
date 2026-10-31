@@ -1,15 +1,33 @@
-﻿# TuneLand-Starter: startet das Spiel über otvdm und schaltet es mit Magpie automatisch auf Vollbild
+﻿# TuneLand-Starter: startet das Spiel von der CD über otvdm und schaltet es mit Magpie automatisch auf Vollbild
 param([switch]$Liederspieler)
 
 $ErrorActionPreference = 'Stop'
 $root   = $PSScriptRoot
 $otvdm  = Join-Path $root 'otvdm\otvdmw.exe'
-$game   = Join-Path $root 'Spiel'
 $magpie = Join-Path $root 'Magpie\Magpie.exe'
 $cache  = Join-Path $root 'bildausschnitt.txt'
 
 Add-Type -AssemblyName System.Drawing, System.Windows.Forms
 Add-Type -Path (Join-Path $root 'TuneLandHelper.cs') -ReferencedAssemblies System.Drawing
+
+# Das Spiel läuft immer von der CD bzw. dem gemounteten Abbild
+$game = $null
+while (-not $game) {
+    foreach ($d in [IO.DriveInfo]::GetDrives()) {
+        $dir = Join-Path $d.RootDirectory.FullName 'TUNELAND'
+        if ($d.IsReady -and (Test-Path (Join-Path $dir 'TUNEGERM.EXE'))) { $game = $dir; break }
+    }
+    if (-not $game) {
+        $answer = [System.Windows.Forms.MessageBox]::Show(
+            "Bitte legen Sie die TuneLand-CD ein bzw. mounten Sie das BIN/CUE-Abbild.",
+            'TuneLand', 'RetryCancel', 'Information')
+        if ($answer -ne 'Retry') { exit }
+    }
+}
+
+# Einstellungen, die sonst das Original-Setup im Windows-Ordner von otvdm anlegt – passend zum aktuellen CD-Laufwerk
+Set-Content (Join-Path $root 'otvdm\WINDOWS\7thlevel.ini') -Encoding ascii -Value @(
+    '[7thLevel]', "BaseDir=$root", 'Group=7th Level', '[tuneland]', "PATH=$game\")
 
 $exe = if ($Liederspieler) { 'JUKEGERM.EXE' } else { 'TUNEGERM.EXE' }
 $proc = Start-Process $otvdm -ArgumentList ('"' + (Join-Path $game $exe) + '"') -WorkingDirectory $game -PassThru

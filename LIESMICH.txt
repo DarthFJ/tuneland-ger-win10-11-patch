@@ -2,7 +2,8 @@ TuneLand GER Win10/11 Patch
 ===========================
 
 Damit läuft "TuneLand mit Ron Williams" (7th Level, deutsche Version) unter
-Windows 10/11: ohne CD, mit Musik und im Vollbild.
+Windows 10/11: mit Musik und im Vollbild. Das Spiel läuft wie im Original
+von der CD – zum Spielen muss die CD eingelegt bzw. das Abbild gemountet sein.
 
 Getestet nur mit der deutschen Version (CD-Name GERMTUNE). Andere
 Sprachfassungen werden derzeit nicht erkannt.
@@ -13,7 +14,8 @@ So geht's
    (z. B. mit WinCDEmu: Rechtsklick auf die .cue > "Einhängen").
 2. Doppelklick auf "TuneLand installieren.cmd" und dann auf "Installieren".
 3. Fertig. TuneLand startet ab jetzt über das Symbol auf dem Desktop.
-   Die CD bzw. das Abbild wird danach nicht mehr gebraucht.
+   Die CD bzw. das gemountete Abbild muss dabei eingelegt sein; fehlt sie,
+   fragt der Starter danach.
 
 Gemountete Abbilder liefern keine Musiktracks. Dann sucht der Patch die
 passende .cue-Datei selbst (neben dem Patch-Ordner, auf dem Desktop, in
@@ -44,5 +46,5 @@ Enthaltene Werkzeuge
 - Magpie 0.13.0 (skaliert das Spielbild auf Vollbild)
   https://github.com/Blinue/Magpie
 
-Die Spieldaten und die Musik stammen immer von Ihrer eigenen CD;
-der Patch enthält keine Inhalte des Spiels.
+Der Patch enthält keine Inhalte des Spiels. Das Spiel läuft von Ihrer CD;
+nur die Lieder werden bei der Installation von Ihrer CD in OGG umgewandelt.

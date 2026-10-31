@@ -1,7 +1,8 @@
 # TuneLand GER Win10/11 Patch
 
 Damit läuft **„TuneLand mit Ron Williams“** (7th Level, 1994, deutsche Version) auf modernem Windows.
-Ein Doppelklick genügt. Danach läuft das Spiel **ohne CD**, **mit Musik** und **im Vollbild**.
+Ein Doppelklick genügt. Danach läuft das Spiel **mit Musik** und **im Vollbild**.
+Wie im Original läuft TuneLand dabei **von der CD**: Zum Spielen muss die CD eingelegt oder das Abbild gemountet sein.
 
 > *English summary below.*
 
@@ -27,7 +28,7 @@ Wer eine andere Version besitzt und helfen möchte, kann gern ein [Issue](../../
 1. [Release-ZIP herunterladen](../../releases/latest) und entpacken.
 2. CD einlegen **oder** die `.cue`-Datei mounten (WinCDEmu: Rechtsklick › *Einhängen*).
 3. **`TuneLand installieren.cmd`** doppelklicken › **Installieren**.
-4. Fertig: TuneLand startet über das Desktop-Symbol. Die CD bzw. das Abbild wird nicht mehr gebraucht.
+4. Fertig: TuneLand startet über das Desktop-Symbol. Die CD bzw. das gemountete Abbild muss dabei eingelegt sein.
 
 Installiert wird nach `%LOCALAPPDATA%\Programs\TuneLand`. Dafür sind keine Administratorrechte nötig.
 Entfernen geht über *Startmenü › TuneLand › TuneLand deinstallieren* oder *Einstellungen › Apps*.
@@ -53,7 +54,7 @@ TuneLand ist ein 16-Bit-Programm für Windows 3.1 und hat drei Probleme auf heut
 
 | Problem | Lösung |
 |---|---|
-| 64-Bit-Windows führt keine 16-Bit-Programme aus | [otvdm/winevdm](https://github.com/otya128/winevdm) als private Kopie im Spielordner |
+| 64-Bit-Windows führt keine 16-Bit-Programme aus | [otvdm/winevdm](https://github.com/otya128/winevdm) als private Kopie im Installationsordner |
 | Die Lieder sind Audiotracks auf der CD. Gemountete Abbilder zeigen sie nicht, und otvdm reicht die CD-Befehle nicht passend weiter | Der Installer liest die 97 Lieder von der CD oder direkt aus der BIN und wandelt sie in OGG um. Eine angepasste [ogg-winmm](https://github.com/ayuanx/ogg-winmm)-DLL spielt sie ab, wenn das Spiel „CD-Track X“ verlangt |
 | Das Spiel zeigt ein kleines 640×480-Bild mitten auf einem schwarzen Bildschirm | [Magpie](https://github.com/Blinue/Magpie) schneidet die Bildfläche aus und skaliert sie im 4:3-Format auf Vollbild. Der Ausschnitt wird automatisch erkannt |
 
@@ -63,15 +64,18 @@ Im Einzelnen:
 2. Die Musik kommt von einer echten CD per Raw-Read. Bei einem gemounteten Abbild sucht der Installer die passende
    `.cue` selbst: neben dem Patch-Ordner, auf dem Desktop, in *Dokumente* und in *Downloads*. Dabei prüft er den Volume-Namen
    im Abbild. Findet er keine, fragt er nach.
-3. Die Spieldateien werden auf die Festplatte kopiert. Die Einstellungen, die früher das Original-Setup
-   angelegt hat (`7thlevel.ini`), richtet der Installer selbst ein.
+3. Das Spiel selbst wird **nicht** auf die Festplatte kopiert. Der Starter sucht bei jedem Start die CD und startet
+   TuneLand direkt von dort. Fehlt sie, bittet er darum. Die `7thlevel.ini`, die früher das Original-Setup angelegt hat,
+   schreibt er jeweils passend zum CD-Laufwerk.
 4. Er legt Verknüpfungen auf dem Desktop und im Startmenü an, auch für den *Tunes-Player*, und einen Eintrag unter *Apps*.
 
-Der Patch enthält **keine Spielinhalte**. Alles stammt von der eigenen CD.
+Der Patch enthält **keine Spielinhalte**. Nur die Lieder werden bei der Installation von der eigenen CD in OGG
+umgewandelt, denn die CD-Audiotracks lassen sich unter otvdm und von gemounteten Abbildern nicht direkt abspielen.
 
 ## Fehlerhilfe
 
-- **„Keine TuneLand-CD gefunden“**: Die CD bzw. das Abbild ist nicht eingelegt oder gemountet.
+- **„Keine TuneLand-CD gefunden“** (Installer) bzw. **„Bitte legen Sie die TuneLand-CD ein“** (beim Spielstart):
+  Die CD bzw. das Abbild ist nicht eingelegt oder gemountet. Einlegen bzw. mounten, dann *Wiederholen*.
 - **Frage nach der CUE-Datei**: Die `.cue` zum gemounteten Abbild auswählen. Sie muss neben der `.bin` liegen.
 - **Kein Vollbild**: Alt + Shift + A drücken. Nach einem Wechsel von Bildschirm oder Auflösung erkennt der Patch die
   Bildfläche neu. Andernfalls hilft es, `bildausschnitt.txt` im Installationsordner zu löschen.
@@ -92,7 +96,7 @@ tools\build-release.ps1        lädt die Fremdprogramme und baut das Release-ZIP
 ```
 
 Die Fremdprogramme (otvdm, Magpie, oggenc2, `winmm.dll`) liegen nicht im Repository. `tools\build-release.ps1` lädt
-sie bzw. baut sie und erstellt `release\TuneLand-Patch-v1.0.zip`. Details und Lizenzen: [THIRD-PARTY.md](THIRD-PARTY.md).
+sie bzw. baut sie und erstellt `release\TuneLand-Patch-v<Version>.zip`. Details und Lizenzen: [THIRD-PARTY.md](THIRD-PARTY.md).
 
 ## Lizenz
 
@@ -105,7 +109,8 @@ TuneLand ist ein Produkt von 7th Level, Inc. Dieses Projekt ist inoffiziell und 
 ## English summary
 
 One-click patch that makes the **German** release of *TuneLand* (7th Level, 1994) run on Windows 10/11:
-no CD needed afterwards, CD music restored and automatic fullscreen.
+CD music restored and automatic fullscreen. The game still runs from the CD, so the disc must be inserted
+(or the image mounted) to play.
 
 1. Download the release ZIP and extract it.
 2. Insert the CD or mount the BIN/CUE image.

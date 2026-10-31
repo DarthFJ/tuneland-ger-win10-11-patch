@@ -33,8 +33,8 @@ $title.SetBounds(20, 15, 520, 32)
 
 $intro = New-Object System.Windows.Forms.Label
 $intro.Text = "Legen Sie die TuneLand-CD ein oder mounten Sie das BIN/CUE-Abbild. " +
-              "Der Patch kopiert das Spiel auf die Festplatte, übernimmt die Musik und " +
-              "richtet den Start im Vollbild ein. Danach wird keine CD mehr gebraucht."
+              "Der Patch richtet otvdm, die Musik und den Start im Vollbild ein. " +
+              "Das Spiel läuft weiterhin von der CD – sie muss zum Spielen eingelegt sein."
 $intro.SetBounds(20, 55, 520, 70)
 
 $status = New-Object System.Windows.Forms.Label
@@ -171,21 +171,9 @@ function Install-TuneLand {
     Copy-Item (Join-Path $here 'TuneLandHelper.cs'), (Join-Path $here 'magpie-config.json'), (Join-Path $here 'uninstall.ps1') $Ziel
     Copy-Item (Join-Path $here 'launcher.ps1') (Join-Path $Ziel 'TuneLand.ps1')
 
-    # Spieldateien von der CD
+    # Das Spiel selbst bleibt auf der CD; wie das Original-Setup nur den CD-Treiber in den Windows-Ordner von otvdm legen
+    # (7thlevel.ini schreibt der Starter bei jedem Start passend zum aktuellen CD-Laufwerk)
     $src = Join-Path $drive.RootDirectory.FullName 'TUNELAND'
-    $dst = Join-Path $Ziel 'Spiel'
-    New-Item -ItemType Directory -Force $dst | Out-Null
-    $files = @(Get-ChildItem $src -File)
-    for ($i = 0; $i -lt $files.Count; $i++) {
-        Set-Status "Kopiere Spieldaten von der CD ($($i + 1)/$($files.Count)): $($files[$i].Name)" (15 + [int](25 * $i / $files.Count))
-        Copy-Item $files[$i].FullName $dst
-    }
-    Copy-Item (Join-Path $drive.RootDirectory.FullName 'README.TXT') $dst -ErrorAction SilentlyContinue
-    Get-ChildItem $dst -File | ForEach-Object { $_.Attributes = 'Normal' }   # CD-Dateien sind schreibgeschützt
-
-    # Einstellungen, die sonst das Original-Setup im Windows-Ordner von otvdm anlegt
-    Set-Content (Join-Path $Ziel 'otvdm\WINDOWS\7thlevel.ini') -Encoding ascii -Value @(
-        '[7thLevel]', "BaseDir=$Ziel", 'Group=7th Level', '[tuneland]', "PATH=$dst\")
     Copy-Item (Join-Path $src 'MCICDA.DRV') (Join-Path $Ziel 'otvdm\WINDOWS\SYSTEM\mcicda.drv') -ErrorAction SilentlyContinue
 
     # Musik
@@ -204,8 +192,8 @@ function Install-TuneLand {
     # Symbole, Verknüpfungen, Eintrag in „Apps“
     Set-Status 'Lege Verknüpfungen an …' 94
     $icon = Join-Path $Ziel 'tuneland.ico'
-    Save-Icon (Join-Path $dst 'TUNEGERM.EXE') $icon
-    Save-Icon (Join-Path $dst 'JUKEGERM.EXE') (Join-Path $Ziel 'liederspieler.ico')
+    Save-Icon (Join-Path $src 'TUNEGERM.EXE') $icon
+    Save-Icon (Join-Path $src 'JUKEGERM.EXE') (Join-Path $Ziel 'liederspieler.ico')
 
     if (-not $OhneVerknuepfungen) {
         $run = '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $Ziel 'TuneLand.ps1') + '"'
@@ -232,7 +220,7 @@ function Install-TuneLand {
         Set-ItemProperty $key NoRepair 1 -Type DWord
     }
 
-    Set-Status 'Fertig! TuneLand startet ab jetzt über das Symbol auf dem Desktop – ohne CD.' 100
+    Set-Status 'Fertig! TuneLand startet über das Symbol auf dem Desktop. Die CD bzw. das Abbild muss dabei eingelegt sein.' 100
 }
 
 if ($Automatisch) {
